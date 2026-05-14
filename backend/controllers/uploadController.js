@@ -21,9 +21,7 @@ const uploadDocument = async (req, res) => {
             });
         }
 
-        const filePath = req.file.buffer;
-
-        const fileBuffer = fs.readFileSync(filePath);
+        const fileBuffer = req.file.buffer;
 
         const hash = generateHash(fileBuffer);
 
@@ -31,16 +29,7 @@ const uploadDocument = async (req, res) => {
 
         const verificationId = uuidv4();
 
-        const encryptedPath = path.join(
-            'encrypted',
-            `${verificationId}.enc`
-        );
-
-        encryptFile(
-            filePath,
-            encryptedPath,
-            process.env.AES_SECRET_KEY
-        );
+        
 
         const qrData = `http://localhost:3000/verify/${verificationId}`;
 

@@ -26,9 +26,7 @@ const verifyDocument = async (req, res) => {
 
         }
 
-        const uploadedBuffer = fs.readFileSync(
-            req.file.buffer
-        );
+        const uploadedBuffer = req.file.buffer;
 
         const uploadedHash =
             generateHash(uploadedBuffer);
