@@ -1,0 +1,21 @@
+const express = require('express');
+
+const multer = require('multer');
+
+const {
+    verifyDocument
+} = require('../controllers/verifyController');
+
+const router = express.Router();
+
+const upload = multer({
+    dest: 'uploads/'
+});
+
+router.post(
+    '/',
+    upload.single('document'),
+    verifyDocument
+);
+
+module.exports = router;

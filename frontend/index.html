@@ -1,0 +1,2147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SecureShield — Document Authenticity Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;600;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --cyan: #00e5ff;
+    --emerald: #00ff88;
+    --deep: #030b14;
+    --panel: rgba(0,20,40,0.7);
+    --glass: rgba(0,229,255,0.06);
+    --border: rgba(0,229,255,0.18);
+    --red: #ff3366;
+    --font-mono: 'Share Tech Mono', monospace;
+    --font-display: 'Orbitron', sans-serif;
+    --font-body: 'Inter', sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:#030b14;
+    color:#c8e8f0;
+    font-family:var(--font-body);
+    overflow-x:hidden;
+    cursor:none;
+  }
+
+  /* CUSTOM CURSOR */
+  #cursor{
+    position:fixed;width:12px;height:12px;
+    border-radius:50%;background:var(--cyan);
+    pointer-events:none;z-index:9999;
+    transform:translate(-50%,-50%);
+    transition:transform 0.08s,width 0.2s,height 0.2s,opacity 0.2s;
+    box-shadow:0 0 20px var(--cyan),0 0 40px rgba(0,229,255,0.4);
+    mix-blend-mode:screen;
+  }
+  #cursor-ring{
+    position:fixed;width:36px;height:36px;
+    border-radius:50%;border:1px solid rgba(0,229,255,0.4);
+    pointer-events:none;z-index:9998;
+    transform:translate(-50%,-50%);
+    transition:transform 0.15s ease-out,width 0.3s,height 0.3s;
+  }
+
+  /* CANVAS */
+  #bg-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;}
+
+  /* GRID */
+  .grid-overlay{
+    position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(0,229,255,0.03) 1px,transparent 1px);
+    background-size:60px 60px;
+    animation:gridShift 20s linear infinite;
+  }
+  @keyframes gridShift{
+    0%{background-position:0 0;}
+    100%{background-position:60px 60px;}
+  }
+
+  /* SCAN LINE */
+  .scanline{
+    position:fixed;top:0;left:0;width:100%;height:2px;
+    background:linear-gradient(90deg,transparent,var(--cyan),transparent);
+    z-index:2;pointer-events:none;opacity:0.3;
+    animation:scanMove 8s linear infinite;
+  }
+  @keyframes scanMove{
+    0%{top:-2px;opacity:0;}
+    10%{opacity:0.3;}
+    90%{opacity:0.3;}
+    100%{top:100vh;opacity:0;}
+  }
+
+  /* MOUSE LIGHT */
+  #mouse-light{
+    position:fixed;width:600px;height:600px;
+    border-radius:50%;pointer-events:none;z-index:1;
+    background:radial-gradient(circle,rgba(0,229,255,0.04) 0%,transparent 70%);
+    transform:translate(-50%,-50%);
+    transition:left 0.1s,top 0.1s;
+  }
+
+  /* NAV */
+  nav{
+    position:fixed;top:0;left:0;right:0;z-index:100;
+    padding:20px 60px;
+    display:flex;align-items:center;justify-content:space-between;
+    background:rgba(3,11,20,0.8);
+    backdrop-filter:blur(20px);
+    border-bottom:1px solid var(--border);
+  }
+  .nav-logo{
+    font-family:var(--font-display);font-size:18px;font-weight:700;
+    color:var(--cyan);letter-spacing:3px;
+    text-shadow:0 0 20px rgba(0,229,255,0.6);
+    display:flex;align-items:center;gap:10px;
+  }
+  .logo-shield{
+    width:32px;height:32px;
+    background:linear-gradient(135deg,var(--cyan),var(--emerald));
+    clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+    animation:shieldPulse 3s ease-in-out infinite;
+    flex-shrink:0;
+  }
+  @keyframes shieldPulse{
+    0%,100%{box-shadow:0 0 0 0 rgba(0,229,255,0.4);}
+    50%{box-shadow:0 0 0 8px rgba(0,229,255,0);}
+  }
+  .nav-links{display:flex;gap:36px;align-items:center;}
+  .nav-links a{
+    color:rgba(200,232,240,0.6);font-size:13px;font-weight:500;
+    text-decoration:none;letter-spacing:1px;text-transform:uppercase;
+    transition:color 0.3s;
+    cursor:none;
+  }
+  .nav-links a:hover{color:var(--cyan);}
+  .nav-cta{
+    padding:10px 28px;
+    border:1px solid var(--cyan);
+    color:var(--cyan);font-family:var(--font-display);font-size:11px;
+    font-weight:600;letter-spacing:2px;text-transform:uppercase;
+    background:rgba(0,229,255,0.05);
+    cursor:none;transition:all 0.3s;
+    clip-path:polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);
+  }
+  .nav-cta:hover{
+    background:rgba(0,229,255,0.12);
+    box-shadow:0 0 20px rgba(0,229,255,0.3);
+  }
+
+  /* PAGE SYSTEM */
+  .page{
+    position:relative;z-index:10;
+    min-height:100vh;
+    display:none;
+  }
+  .page.active{display:block;}
+
+  /* ===== LANDING PAGE ===== */
+  #page-landing{}
+
+  /* HERO */
+  .hero{
+    min-height:100vh;
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    padding:120px 60px 60px;
+    position:relative;
+    overflow:hidden;
+  }
+  .hero-eyebrow{
+    font-family:var(--font-mono);font-size:11px;
+    color:var(--emerald);letter-spacing:4px;text-transform:uppercase;
+    margin-bottom:32px;
+    display:flex;align-items:center;gap:12px;
+    animation:fadeUp 1s 0.2s both;
+  }
+  .hero-eyebrow::before,.hero-eyebrow::after{
+    content:'';width:40px;height:1px;
+    background:var(--emerald);opacity:0.5;
+  }
+  .hero-title{
+    font-family:var(--font-display);
+    font-size:clamp(52px,8vw,110px);
+    font-weight:900;
+    text-align:center;
+    line-height:0.95;
+    margin-bottom:28px;
+    animation:fadeUp 1s 0.4s both;
+  }
+  .hero-title span.grad{
+    background:linear-gradient(135deg,#fff 0%,var(--cyan) 40%,var(--emerald) 80%);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    background-clip:text;
+    filter:drop-shadow(0 0 40px rgba(0,229,255,0.3));
+  }
+  .hero-sub{
+    font-size:17px;font-weight:300;color:rgba(200,232,240,0.6);
+    text-align:center;max-width:560px;line-height:1.7;
+    margin-bottom:52px;
+    animation:fadeUp 1s 0.6s both;
+  }
+  .hero-ctas{
+    display:flex;gap:20px;margin-bottom:80px;
+    animation:fadeUp 1s 0.8s both;
+  }
+  .btn-primary{
+    padding:16px 40px;
+    background:linear-gradient(135deg,rgba(0,229,255,0.15),rgba(0,255,136,0.08));
+    border:1px solid var(--cyan);
+    color:#fff;font-family:var(--font-display);font-size:12px;
+    font-weight:600;letter-spacing:2px;text-transform:uppercase;
+    cursor:none;position:relative;overflow:hidden;
+    transition:all 0.3s;
+    clip-path:polygon(12px 0%,100% 0%,calc(100% - 12px) 100%,0% 100%);
+  }
+  .btn-primary::before{
+    content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;
+    background:linear-gradient(90deg,transparent,rgba(0,229,255,0.2),transparent);
+    transition:left 0.5s;
+  }
+  .btn-primary:hover::before{left:100%;}
+  .btn-primary:hover{
+    box-shadow:0 0 30px rgba(0,229,255,0.4),0 0 60px rgba(0,229,255,0.15);
+  }
+  .btn-secondary{
+    padding:16px 40px;
+    border:1px solid rgba(200,232,240,0.2);
+    color:rgba(200,232,240,0.7);font-family:var(--font-display);font-size:12px;
+    font-weight:600;letter-spacing:2px;text-transform:uppercase;
+    cursor:none;transition:all 0.3s;
+    clip-path:polygon(12px 0%,100% 0%,calc(100% - 12px) 100%,0% 100%);
+  }
+  .btn-secondary:hover{
+    border-color:rgba(200,232,240,0.5);color:#fff;
+  }
+
+  /* 3D DOC CARD */
+  .hero-visual{
+    width:100%;max-width:900px;
+    position:relative;
+    animation:fadeUp 1.2s 1s both;
+  }
+  .doc-stage{
+    perspective:1200px;
+    display:flex;justify-content:center;
+  }
+  .doc-card-3d{
+    width:340px;height:440px;
+    position:relative;
+    transform-style:preserve-3d;
+    transition:transform 0.1s ease-out;
+  }
+  .doc-face{
+    position:absolute;inset:0;
+    background:linear-gradient(135deg,rgba(0,20,40,0.95),rgba(0,40,80,0.8));
+    border:1px solid var(--border);
+    border-radius:4px;
+    padding:32px;
+    overflow:hidden;
+    box-shadow:0 40px 80px rgba(0,0,0,0.6),0 0 0 1px rgba(0,229,255,0.1) inset;
+  }
+  .doc-face::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:3px;
+    background:linear-gradient(90deg,transparent,var(--cyan),transparent);
+    animation:scanDoc 3s linear infinite;
+  }
+  @keyframes scanDoc{
+    0%{top:-3px;opacity:0;}
+    10%{opacity:1;}
+    90%{opacity:1;}
+    100%{top:100%;opacity:0;}
+  }
+  .doc-header{
+    display:flex;align-items:center;gap:12px;margin-bottom:28px;
+  }
+  .doc-icon{
+    width:36px;height:36px;
+    background:linear-gradient(135deg,var(--cyan),var(--emerald));
+    border-radius:4px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:16px;
+  }
+  .doc-title{font-family:var(--font-display);font-size:11px;color:rgba(200,232,240,0.8);letter-spacing:2px;}
+  .doc-subtitle{font-family:var(--font-mono);font-size:9px;color:rgba(0,229,255,0.5);margin-top:2px;}
+  .doc-lines{display:flex;flex-direction:column;gap:8px;margin-bottom:24px;}
+  .doc-line{
+    height:8px;border-radius:2px;
+    background:rgba(200,232,240,0.1);
+    position:relative;overflow:hidden;
+  }
+  .doc-line::after{
+    content:'';position:absolute;top:0;left:-100%;height:100%;width:60%;
+    background:linear-gradient(90deg,transparent,rgba(0,229,255,0.3),transparent);
+    animation:lineShimmer 3s linear infinite;
+  }
+  @keyframes lineShimmer{
+    0%{left:-100%;}100%{left:200%;}
+  }
+  .doc-line:nth-child(1){width:80%;animation-delay:0s;}
+  .doc-line:nth-child(2){width:95%;}
+  .doc-line:nth-child(3){width:70%;}
+  .doc-line:nth-child(4){width:88%;}
+  .doc-hash-box{
+    background:rgba(0,229,255,0.06);
+    border:1px solid rgba(0,229,255,0.2);
+    border-radius:3px;padding:12px;margin-bottom:20px;
+  }
+  .doc-hash-label{font-family:var(--font-mono);font-size:8px;color:var(--emerald);letter-spacing:2px;margin-bottom:6px;}
+  .doc-hash-val{font-family:var(--font-mono);font-size:9px;color:rgba(0,229,255,0.7);word-break:break-all;line-height:1.4;}
+  .doc-badges{display:flex;gap:8px;flex-wrap:wrap;}
+  .badge{
+    padding:4px 10px;
+    border:1px solid rgba(0,255,136,0.3);
+    border-radius:2px;
+    font-family:var(--font-mono);font-size:8px;
+    color:var(--emerald);letter-spacing:1px;
+  }
+  .badge.cyan{border-color:rgba(0,229,255,0.3);color:var(--cyan);}
+
+  /* Floating indicators */
+  .float-indicator{
+    position:absolute;
+    background:rgba(0,10,25,0.9);
+    border:1px solid var(--border);
+    border-radius:4px;padding:10px 16px;
+    backdrop-filter:blur(10px);
+    font-family:var(--font-mono);font-size:9px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .fi-dot{
+    width:6px;height:6px;border-radius:50%;
+    background:var(--emerald);
+    box-shadow:0 0 8px var(--emerald);
+    animation:dotPulse 2s ease-in-out infinite;
+  }
+  @keyframes dotPulse{
+    0%,100%{opacity:1;transform:scale(1);}
+    50%{opacity:0.5;transform:scale(0.8);}
+  }
+  .fi-1{top:-20px;right:-60px;animation:float1 6s ease-in-out infinite;}
+  .fi-2{bottom:20px;left:-80px;animation:float2 7s ease-in-out infinite;}
+  .fi-3{top:40%;right:-100px;animation:float1 5s ease-in-out infinite 1s;}
+  @keyframes float1{0%,100%{transform:translateY(0);}50%{transform:translateY(-12px);}}
+  @keyframes float2{0%,100%{transform:translateY(0);}50%{transform:translateY(10px);}}
+
+  /* STATS */
+  .hero-stats{
+    position:absolute;bottom:60px;
+    display:flex;gap:60px;
+    animation:fadeUp 1s 1.2s both;
+  }
+  .stat{text-align:center;}
+  .stat-num{
+    font-family:var(--font-display);font-size:28px;font-weight:700;
+    color:var(--cyan);
+    text-shadow:0 0 20px rgba(0,229,255,0.4);
+  }
+  .stat-label{font-size:11px;color:rgba(200,232,240,0.4);letter-spacing:2px;text-transform:uppercase;margin-top:4px;}
+
+  @keyframes fadeUp{
+    from{opacity:0;transform:translateY(30px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+
+  /* FEATURES */
+  .features{padding:120px 60px;}
+  .section-tag{
+    font-family:var(--font-mono);font-size:10px;color:var(--cyan);
+    letter-spacing:4px;text-transform:uppercase;
+    display:flex;align-items:center;gap:12px;
+    margin-bottom:60px;
+    justify-content:center;
+  }
+  .section-tag::before,.section-tag::after{
+    content:'';flex:1;max-width:80px;height:1px;
+    background:linear-gradient(90deg,transparent,var(--cyan));
+  }
+  .section-tag::after{background:linear-gradient(270deg,transparent,var(--cyan));}
+  .section-title{
+    font-family:var(--font-display);font-size:clamp(32px,4vw,52px);
+    font-weight:700;text-align:center;margin-bottom:80px;
+    background:linear-gradient(135deg,#fff 0%,rgba(200,232,240,0.7) 100%);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+    background-clip:text;
+  }
+  .features-grid{
+    display:grid;grid-template-columns:repeat(2,1fr);
+    gap:2px;max-width:1000px;margin:0 auto;
+  }
+  .feat-card{
+    background:var(--glass);
+    border:1px solid var(--border);
+    padding:48px;
+    position:relative;overflow:hidden;
+    transition:all 0.4s;
+  }
+  .feat-card:hover{
+    background:rgba(0,229,255,0.06);
+    border-color:rgba(0,229,255,0.3);
+  }
+  .feat-card::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent,var(--cyan),transparent);
+    opacity:0;transition:opacity 0.4s;
+  }
+  .feat-card:hover::before{opacity:1;}
+  .feat-number{
+    font-family:var(--font-display);font-size:11px;
+    color:rgba(0,229,255,0.3);letter-spacing:3px;margin-bottom:20px;
+  }
+  .feat-icon{
+    width:52px;height:52px;margin-bottom:24px;
+    background:linear-gradient(135deg,rgba(0,229,255,0.1),rgba(0,255,136,0.05));
+    border:1px solid rgba(0,229,255,0.2);
+    border-radius:4px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:22px;
+  }
+  .feat-title{
+    font-family:var(--font-display);font-size:16px;font-weight:600;
+    color:#fff;margin-bottom:12px;letter-spacing:1px;
+  }
+  .feat-desc{font-size:14px;color:rgba(200,232,240,0.5);line-height:1.7;}
+  .feat-algo{
+    font-family:var(--font-mono);font-size:10px;color:var(--emerald);
+    margin-top:16px;letter-spacing:2px;
+  }
+
+  /* HOW IT WORKS */
+  .how-section{
+    padding:120px 60px;
+    background:linear-gradient(180deg,transparent,rgba(0,229,255,0.02),transparent);
+  }
+  .steps{display:flex;gap:0;max-width:1000px;margin:0 auto;position:relative;}
+  .steps::before{
+    content:'';position:absolute;top:32px;left:10%;right:10%;height:1px;
+    background:linear-gradient(90deg,transparent,var(--border),var(--border),transparent);
+  }
+  .step{flex:1;text-align:center;padding:0 24px;}
+  .step-num{
+    width:64px;height:64px;margin:0 auto 24px;
+    border-radius:50%;
+    background:rgba(0,10,25,0.9);
+    border:1px solid var(--border);
+    font-family:var(--font-display);font-size:20px;font-weight:700;
+    color:var(--cyan);
+    display:flex;align-items:center;justify-content:center;
+    position:relative;z-index:1;
+    transition:all 0.3s;
+  }
+  .step:hover .step-num{
+    border-color:var(--cyan);
+    box-shadow:0 0 20px rgba(0,229,255,0.3);
+  }
+  .step-title{
+    font-family:var(--font-display);font-size:13px;font-weight:600;
+    color:#fff;margin-bottom:8px;letter-spacing:1px;
+  }
+  .step-desc{font-size:13px;color:rgba(200,232,240,0.5);line-height:1.6;}
+
+  /* CTA SECTION */
+  .cta-section{
+    padding:120px 60px;
+    text-align:center;
+  }
+  .cta-box{
+    max-width:700px;margin:0 auto;
+    background:linear-gradient(135deg,rgba(0,229,255,0.05),rgba(0,255,136,0.03));
+    border:1px solid rgba(0,229,255,0.2);
+    padding:80px;
+    position:relative;overflow:hidden;
+  }
+  .cta-box::before{
+    content:'';position:absolute;inset:0;
+    background:radial-gradient(ellipse at center,rgba(0,229,255,0.05) 0%,transparent 70%);
+  }
+  .cta-title{
+    font-family:var(--font-display);font-size:clamp(28px,3vw,42px);
+    font-weight:700;color:#fff;margin-bottom:20px;position:relative;
+  }
+  .cta-sub{font-size:15px;color:rgba(200,232,240,0.5);line-height:1.7;margin-bottom:40px;position:relative;}
+
+  /* ===== UPLOAD DASHBOARD ===== */
+  #page-upload{padding-top:80px;}
+  .dashboard{
+    display:grid;grid-template-columns:1fr 380px;
+    gap:2px;min-height:calc(100vh - 80px);
+  }
+  .dash-main{
+    padding:40px;
+    border-right:1px solid var(--border);
+  }
+  .dash-sidebar{
+    padding:40px 32px;
+    background:rgba(0,10,25,0.4);
+  }
+  .dash-header{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:40px;
+  }
+  .dash-title{
+    font-family:var(--font-display);font-size:22px;font-weight:700;
+    color:#fff;letter-spacing:2px;
+  }
+  .dash-subtitle{font-size:13px;color:rgba(200,232,240,0.4);margin-top:4px;font-family:var(--font-mono);}
+  .status-badge{
+    display:flex;align-items:center;gap:8px;
+    font-family:var(--font-mono);font-size:10px;
+    color:var(--emerald);letter-spacing:2px;
+  }
+  .status-dot{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--emerald);
+    box-shadow:0 0 10px var(--emerald);
+    animation:dotPulse 2s infinite;
+  }
+
+  /* DROP ZONE */
+  .drop-zone{
+    border:2px dashed rgba(0,229,255,0.2);
+    border-radius:4px;
+    padding:80px 40px;
+    text-align:center;
+    position:relative;overflow:hidden;
+    transition:all 0.4s;
+    cursor:none;
+    background:rgba(0,229,255,0.02);
+    margin-bottom:32px;
+  }
+  .drop-zone.drag-over{
+    border-color:var(--cyan);
+    background:rgba(0,229,255,0.06);
+    box-shadow:0 0 40px rgba(0,229,255,0.1) inset;
+  }
+  .drop-zone::before{
+    content:'';position:absolute;top:0;left:-100%;
+    width:100%;height:2px;
+    background:linear-gradient(90deg,transparent,var(--cyan),transparent);
+    animation:dropScan 4s linear infinite;
+  }
+  @keyframes dropScan{
+    0%{top:-2px;left:0;opacity:0;}
+    5%{opacity:1;}
+    95%{opacity:1;}
+    100%{top:100%;left:0;opacity:0;}
+  }
+  .drop-icon{
+    width:80px;height:80px;margin:0 auto 24px;
+    background:linear-gradient(135deg,rgba(0,229,255,0.1),rgba(0,255,136,0.05));
+    border:1px solid rgba(0,229,255,0.2);
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:32px;
+    transition:all 0.4s;
+  }
+  .drop-zone:hover .drop-icon,.drop-zone.drag-over .drop-icon{
+    box-shadow:0 0 30px rgba(0,229,255,0.3);
+    border-color:var(--cyan);
+  }
+  .drop-title{
+    font-family:var(--font-display);font-size:16px;font-weight:600;
+    color:#fff;margin-bottom:8px;letter-spacing:1px;
+  }
+  .drop-sub{font-size:13px;color:rgba(200,232,240,0.4);margin-bottom:24px;}
+  .drop-btn{
+    display:inline-block;padding:10px 28px;
+    border:1px solid var(--cyan);color:var(--cyan);
+    font-family:var(--font-mono);font-size:11px;letter-spacing:2px;
+    transition:all 0.3s;cursor:none;
+  }
+  .drop-btn:hover{background:rgba(0,229,255,0.1);}
+
+  /* PROGRESS AREA */
+  .progress-area{display:none;}
+  .progress-area.active{display:block;}
+  .progress-file{
+    display:flex;align-items:center;gap:16px;
+    background:rgba(0,229,255,0.04);
+    border:1px solid rgba(0,229,255,0.15);
+    padding:16px 20px;margin-bottom:16px;border-radius:4px;
+  }
+  .pf-icon{font-size:24px;}
+  .pf-info{flex:1;}
+  .pf-name{font-size:13px;color:#fff;font-weight:500;margin-bottom:4px;}
+  .pf-size{font-family:var(--font-mono);font-size:10px;color:rgba(200,232,240,0.4);}
+  .pf-bar{
+    height:2px;background:rgba(0,229,255,0.15);border-radius:2px;margin-top:8px;
+    overflow:hidden;
+  }
+  .pf-bar-fill{
+    height:100%;width:0%;
+    background:linear-gradient(90deg,var(--cyan),var(--emerald));
+    transition:width 0.1s;
+    box-shadow:0 0 10px var(--cyan);
+  }
+
+  /* HASH VISUALIZER */
+  .hash-vis{
+    background:rgba(0,10,25,0.6);
+    border:1px solid var(--border);
+    padding:24px;margin-bottom:16px;
+    font-family:var(--font-mono);
+    display:none;
+  }
+  .hash-vis.active{display:block;}
+  .hv-label{font-size:9px;color:var(--emerald);letter-spacing:3px;margin-bottom:12px;text-transform:uppercase;}
+  .hv-hash{
+    font-size:11px;color:var(--cyan);word-break:break-all;
+    line-height:1.6;
+  }
+  .hv-hash span{display:inline-block;}
+  .hv-hash .new-char{
+    animation:charIn 0.1s ease-out;
+  }
+  @keyframes charIn{
+    from{opacity:0;transform:translateY(-4px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+
+  /* QR AREA */
+  .qr-area{
+    display:none;
+    background:rgba(0,10,25,0.6);
+    border:1px solid var(--border);
+    padding:24px;
+    text-align:center;
+  }
+  .qr-area.active{display:block;}
+  .qr-label{font-family:var(--font-mono);font-size:9px;color:var(--emerald);letter-spacing:3px;margin-bottom:20px;text-transform:uppercase;}
+  #qr-canvas{
+    width:160px;height:160px;margin:0 auto;
+    background:#000;padding:12px;
+    position:relative;overflow:hidden;
+  }
+  .qr-reveal-overlay{
+    position:absolute;top:0;left:0;right:0;
+    background:linear-gradient(180deg,var(--deep),transparent);
+    height:100%;
+    animation:qrReveal 1.5s ease-out 0.5s both;
+  }
+  @keyframes qrReveal{
+    0%{height:100%;}
+    100%{height:0%;}
+  }
+  .qr-canvas-inner{
+    width:136px;height:136px;
+    display:grid;grid-template-columns:repeat(12,1fr);
+    grid-template-rows:repeat(12,1fr);
+    gap:1px;
+  }
+  .qr-cell{
+    background:rgba(200,232,240,0.1);
+    transition:background 0.05s;
+  }
+  .qr-cell.filled{background:#fff;}
+
+  /* SIDEBAR */
+  .sb-section{margin-bottom:32px;}
+  .sb-title{
+    font-family:var(--font-display);font-size:10px;font-weight:600;
+    color:rgba(0,229,255,0.6);letter-spacing:3px;text-transform:uppercase;
+    margin-bottom:16px;padding-bottom:8px;
+    border-bottom:1px solid var(--border);
+  }
+  .sb-row{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:10px 0;border-bottom:1px solid rgba(200,232,240,0.05);
+  }
+  .sb-key{font-family:var(--font-mono);font-size:10px;color:rgba(200,232,240,0.4);letter-spacing:1px;}
+  .sb-val{font-family:var(--font-mono);font-size:10px;color:var(--cyan);}
+  .sb-val.green{color:var(--emerald);}
+  .sb-val.active{
+    animation:valPulse 2s ease-in-out infinite;
+  }
+  @keyframes valPulse{
+    0%,100%{opacity:1;}50%{opacity:0.5;}
+  }
+
+  /* ENCRYPT RING */
+  .encrypt-ring{
+    width:120px;height:120px;margin:20px auto;
+    position:relative;
+  }
+  .er-svg{animation:erRotate 8s linear infinite;}
+  @keyframes erRotate{0%{transform:rotate(0);}100%{transform:rotate(360deg);}}
+  .er-svg2{
+    position:absolute;top:50%;left:50%;
+    transform:translate(-50%,-50%);
+    animation:erRotate2 5s linear infinite reverse;
+  }
+  @keyframes erRotate2{0%{transform:translate(-50%,-50%) rotate(0);}100%{transform:translate(-50%,-50%) rotate(360deg);}}
+  .er-center{
+    position:absolute;top:50%;left:50%;
+    transform:translate(-50%,-50%);
+    font-family:var(--font-display);font-size:10px;
+    color:var(--cyan);text-align:center;letter-spacing:1px;
+    text-shadow:0 0 10px var(--cyan);
+  }
+
+  /* SUCCESS STATE */
+  .success-state{
+    display:none;
+    padding:32px;text-align:center;
+    background:rgba(0,255,136,0.04);
+    border:1px solid rgba(0,255,136,0.2);
+    margin-top:16px;
+  }
+  .success-state.active{display:block;animation:successIn 0.6s ease-out;}
+  @keyframes successIn{
+    from{opacity:0;transform:scale(0.97);}
+    to{opacity:1;transform:scale(1);}
+  }
+  .success-icon{
+    font-size:48px;margin-bottom:16px;
+    animation:successPulse 2s ease-in-out infinite;
+  }
+  @keyframes successPulse{
+    0%,100%{filter:drop-shadow(0 0 0 rgba(0,255,136,0));}
+    50%{filter:drop-shadow(0 0 20px rgba(0,255,136,0.6));}
+  }
+  .success-title{
+    font-family:var(--font-display);font-size:18px;font-weight:700;
+    color:var(--emerald);letter-spacing:2px;margin-bottom:8px;
+  }
+  .success-sub{font-family:var(--font-mono);font-size:11px;color:rgba(0,255,136,0.5);}
+
+  /* ===== VERIFICATION PAGE ===== */
+  #page-verify{padding-top:80px;}
+  .verify-layout{
+    display:grid;grid-template-columns:1fr 1fr;
+    min-height:calc(100vh - 80px);
+  }
+  .verify-upload{
+    padding:60px;border-right:1px solid var(--border);
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+  }
+  .verify-result{
+    padding:60px;
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+  }
+  .verify-title{
+    font-family:var(--font-display);font-size:11px;font-weight:600;
+    color:rgba(0,229,255,0.6);letter-spacing:4px;text-transform:uppercase;
+    margin-bottom:32px;
+    text-align:center;
+  }
+
+  /* SCAN AREA */
+  .scan-target{
+    width:280px;height:360px;
+    border:1px solid var(--border);
+    position:relative;overflow:hidden;
+    background:rgba(0,10,25,0.6);
+    margin-bottom:32px;
+  }
+  .scan-target .corners::before,.scan-target .corners::after{
+    content:'';position:absolute;width:20px;height:20px;
+    border-color:var(--cyan);border-style:solid;
+    border-width:0;
+  }
+  .scan-corner{
+    position:absolute;width:20px;height:20px;
+  }
+  .sc-tl{top:0;left:0;border-top:2px solid var(--cyan);border-left:2px solid var(--cyan);}
+  .sc-tr{top:0;right:0;border-top:2px solid var(--cyan);border-right:2px solid var(--cyan);}
+  .sc-bl{bottom:0;left:0;border-bottom:2px solid var(--cyan);border-left:2px solid var(--cyan);}
+  .sc-br{bottom:0;right:0;border-bottom:2px solid var(--cyan);border-right:2px solid var(--cyan);}
+  .scan-beam{
+    position:absolute;left:0;right:0;height:2px;top:0;
+    background:linear-gradient(90deg,transparent,var(--cyan),transparent);
+    box-shadow:0 0 20px var(--cyan),0 0 40px rgba(0,229,255,0.5);
+    opacity:0;
+  }
+  .scan-beam.active{
+    animation:beamScan 2s ease-in-out infinite;
+    opacity:1;
+  }
+  @keyframes beamScan{
+    0%{top:0;}
+    50%{top:calc(100% - 2px);}
+    100%{top:0;}
+  }
+  .scan-doc-vis{
+    position:absolute;inset:20px;
+    display:flex;flex-direction:column;gap:8px;
+    justify-content:center;padding:20px;
+  }
+  .sv-line{
+    height:6px;border-radius:2px;
+    background:rgba(200,232,240,0.08);
+  }
+  .sv-line:nth-child(odd){width:85%;}
+  .sv-line:nth-child(even){width:70%;}
+
+  /* RESULT STATE */
+  .result-idle{
+    text-align:center;
+    opacity:0.4;
+  }
+  .result-idle .ri-icon{font-size:64px;margin-bottom:16px;opacity:0.3;}
+  .result-idle p{font-family:var(--font-mono);font-size:11px;color:rgba(200,232,240,0.4);letter-spacing:2px;}
+
+  .result-checking{display:none;text-align:center;}
+  .result-valid{display:none;text-align:center;}
+  .result-tampered{display:none;text-align:center;}
+
+  .result-checking.show,.result-valid.show,.result-tampered.show{display:block;}
+  .result-idle.hide{display:none;}
+
+  /* Checking state */
+  .check-ring{
+    width:120px;height:120px;margin:0 auto 24px;position:relative;
+  }
+  .check-ring-svg{
+    animation:erRotate 1.5s linear infinite;
+  }
+
+  /* Valid state */
+  .valid-container{animation:validReveal 0.8s ease-out;}
+  @keyframes validReveal{
+    from{opacity:0;transform:scale(0.9);}
+    to{opacity:1;transform:scale(1);}
+  }
+  .valid-hex{
+    width:120px;height:120px;margin:0 auto 24px;
+    background:linear-gradient(135deg,rgba(0,255,136,0.15),rgba(0,255,136,0.05));
+    clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+    display:flex;align-items:center;justify-content:center;
+    font-size:40px;
+    animation:validPulseOuter 2s ease-in-out infinite;
+    border:2px solid rgba(0,255,136,0.3);
+  }
+  @keyframes validPulseOuter{
+    0%,100%{box-shadow:0 0 0 0 rgba(0,255,136,0.3),0 0 0 0 rgba(0,255,136,0.1);}
+    50%{box-shadow:0 0 0 20px rgba(0,255,136,0),0 0 0 40px rgba(0,255,136,0);}
+  }
+  .valid-title{
+    font-family:var(--font-display);font-size:24px;font-weight:900;
+    color:var(--emerald);letter-spacing:4px;margin-bottom:8px;
+    text-shadow:0 0 30px rgba(0,255,136,0.5);
+  }
+  .valid-sub{font-family:var(--font-mono);font-size:11px;color:rgba(0,255,136,0.5);letter-spacing:2px;margin-bottom:24px;}
+  .valid-details{
+    background:rgba(0,255,136,0.04);
+    border:1px solid rgba(0,255,136,0.15);
+    padding:20px;text-align:left;
+    font-family:var(--font-mono);font-size:10px;
+  }
+  .vd-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid rgba(0,255,136,0.06);}
+  .vd-key{color:rgba(200,232,240,0.4);}
+  .vd-val{color:var(--emerald);}
+
+  /* Tampered state */
+  .tampered-container{animation:glitch 0.3s ease-out;}
+  @keyframes glitch{
+    0%{transform:translate(0);}
+    20%{transform:translate(-4px,2px);}
+    40%{transform:translate(4px,-2px);}
+    60%{transform:translate(-2px,4px);}
+    80%{transform:translate(2px,-4px);}
+    100%{transform:translate(0);}
+  }
+  .tampered-hex{
+    width:120px;height:120px;margin:0 auto 24px;
+    background:linear-gradient(135deg,rgba(255,51,102,0.15),rgba(255,51,102,0.05));
+    clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);
+    display:flex;align-items:center;justify-content:center;
+    font-size:40px;
+    animation:tamperedPulse 1s ease-in-out infinite;
+  }
+  @keyframes tamperedPulse{
+    0%,100%{box-shadow:0 0 0 0 rgba(255,51,102,0.4);}
+    50%{box-shadow:0 0 0 20px rgba(255,51,102,0);}
+  }
+  .tampered-title{
+    font-family:var(--font-display);font-size:24px;font-weight:900;
+    color:var(--red);letter-spacing:4px;margin-bottom:8px;
+    animation:glitchText 2s linear infinite;
+    text-shadow:0 0 30px rgba(255,51,102,0.5);
+  }
+  @keyframes glitchText{
+    0%,90%,100%{text-shadow:0 0 30px rgba(255,51,102,0.5);}
+    91%{text-shadow:3px 0 var(--cyan),0 0 30px rgba(255,51,102,0.5);}
+    92%{text-shadow:-3px 0 var(--emerald),0 0 30px rgba(255,51,102,0.5);}
+    93%{text-shadow:3px 0 var(--cyan),0 0 30px rgba(255,51,102,0.5);}
+    94%{text-shadow:0 0 30px rgba(255,51,102,0.5);}
+  }
+  .tampered-sub{font-family:var(--font-mono);font-size:11px;color:rgba(255,51,102,0.5);letter-spacing:2px;margin-bottom:24px;}
+  .tampered-warning{
+    background:rgba(255,51,102,0.06);
+    border:1px solid rgba(255,51,102,0.2);
+    padding:20px;
+    font-family:var(--font-mono);font-size:11px;
+    color:rgba(255,51,102,0.7);line-height:1.6;
+  }
+
+  /* Verify CTA row */
+  .verify-cta-row{
+    display:flex;gap:12px;
+    justify-content:center;flex-wrap:wrap;
+    margin-top:8px;
+  }
+
+  /* FOOTER */
+  footer{
+    padding:40px 60px;
+    border-top:1px solid var(--border);
+    display:flex;align-items:center;justify-content:space-between;
+    position:relative;z-index:10;
+  }
+  .footer-logo{font-family:var(--font-display);font-size:14px;color:rgba(0,229,255,0.5);letter-spacing:3px;}
+  .footer-copy{font-family:var(--font-mono);font-size:10px;color:rgba(200,232,240,0.2);letter-spacing:2px;}
+
+  /* UTILITIES */
+  input[type="file"]{display:none;}
+  .text-center{text-align:center;}
+</style>
+</head>
+<body>
+
+<!-- Custom Cursor -->
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+
+<!-- BG Elements -->
+<canvas id="bg-canvas"></canvas>
+<div class="grid-overlay"></div>
+<div class="scanline"></div>
+<div id="mouse-light"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <div class="logo-shield"></div>
+    SECURESHIELD
+  </div>
+  <div class="nav-links">
+    <a href="#" onclick="showPage('landing');return false;">Home</a>
+    <a href="#" onclick="showPage('upload');return false;">Upload</a>
+    <a href="#" onclick="showPage('verify');return false;">Verify</a>
+    <a href="#">Docs</a>
+    <button class="nav-cta" onclick="showPage('upload');return false;">Launch App</button>
+  </div>
+</nav>
+
+<!-- ===== LANDING PAGE ===== -->
+<div id="page-landing" class="page active">
+  <section class="hero">
+    <div class="hero-eyebrow">Military-Grade Document Authentication</div>
+    <h1 class="hero-title">
+      <span class="grad">Verify Once.<br/>Trust Forever.</span>
+    </h1>
+    <p class="hero-sub">SHA-256 hashing, RSA digital signatures, AES-256 encryption. Every document sealed with cryptographic proof — unforgeable, untamperable, undeniable.</p>
+    <div class="hero-ctas">
+      <button class="btn-primary" onclick="showPage('upload')">Verify Documents Instantly</button>
+      <button class="btn-secondary" onclick="showPage('verify')">Check Authenticity</button>
+    </div>
+
+    <!-- 3D DOC CARD -->
+    <div class="hero-visual">
+      <div class="doc-stage">
+        <div class="doc-card-3d" id="docCard3D">
+          <div class="doc-face">
+            <div class="doc-header">
+              <div class="doc-icon">📄</div>
+              <div>
+                <div class="doc-title">DOCUMENT VERIFIED</div>
+                <div class="doc-subtitle">INTEGRITY · AUTHENTIC · SEALED</div>
+              </div>
+            </div>
+            <div class="doc-lines">
+              <div class="doc-line" style="width:80%"></div>
+              <div class="doc-line" style="width:95%"></div>
+              <div class="doc-line" style="width:70%"></div>
+              <div class="doc-line" style="width:88%"></div>
+              <div class="doc-line" style="width:60%"></div>
+            </div>
+            <div class="doc-hash-box">
+              <div class="doc-hash-label">SHA-256 DIGEST</div>
+              <div class="doc-hash-val" id="heroHash">a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456</div>
+            </div>
+            <div class="doc-badges">
+              <span class="badge">RSA-4096 ✓</span>
+              <span class="badge">AES-256 ✓</span>
+              <span class="badge cyan">QR SEALED</span>
+              <span class="badge cyan">BLOCKCHAIN</span>
+            </div>
+          </div>
+
+          <!-- Floating indicators -->
+          <div class="float-indicator fi-1">
+            <div class="fi-dot"></div>
+            <span style="color:var(--emerald)">AUTHENTICATED</span>
+          </div>
+          <div class="float-indicator fi-2">
+            <div class="fi-dot" style="background:var(--cyan);box-shadow:0 0 8px var(--cyan)"></div>
+            <span style="color:var(--cyan)">AES-256 ACTIVE</span>
+          </div>
+          <div class="float-indicator fi-3">
+            <div class="fi-dot"></div>
+            <span style="color:var(--emerald)">HASH MATCH</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat"><div class="stat-num" id="cnt1">0</div><div class="stat-label">Documents Verified</div></div>
+      <div class="stat"><div class="stat-num">256-bit</div><div class="stat-label">Encryption Standard</div></div>
+      <div class="stat"><div class="stat-num" id="cnt2">0</div><div class="stat-label">Tampered Detected</div></div>
+      <div class="stat"><div class="stat-num">99.99%</div><div class="stat-label">Uptime SLA</div></div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="features">
+    <div class="section-tag">Core Technology</div>
+    <h2 class="section-title">Cryptographic Stack</h2>
+    <div class="features-grid">
+      <div class="feat-card">
+        <div class="feat-number">01</div>
+        <div class="feat-icon">🔐</div>
+        <div class="feat-title">SHA-256 Hashing</div>
+        <p class="feat-desc">Every document generates a unique 256-bit cryptographic fingerprint. Any modification — even a single byte — produces an entirely different hash, making tampering instantly detectable.</p>
+        <div class="feat-algo">ALG: SHA-256 / FIPS 180-4</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-number">02</div>
+        <div class="feat-icon">✍️</div>
+        <div class="feat-title">RSA Digital Signatures</div>
+        <p class="feat-desc">4096-bit RSA key pairs bind document identity to its origin. Each signature is cryptographically unique to the issuer, providing non-repudiation and irrefutable authorship proof.</p>
+        <div class="feat-algo">ALG: RSA-4096 / PKCS#1 v2.2</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-number">03</div>
+        <div class="feat-icon">🛡️</div>
+        <div class="feat-title">AES-256 Encryption</div>
+        <p class="feat-desc">Military-grade symmetric encryption protects document payloads in transit and at rest. The same encryption standard used by governments and defense agencies worldwide.</p>
+        <div class="feat-algo">ALG: AES-256-GCM / NIST SP 800-38D</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-number">04</div>
+        <div class="feat-icon">📱</div>
+        <div class="feat-title">QR-Based Verification</div>
+        <p class="feat-desc">Compact, scannable QR codes embed the complete verification payload — hash, signature, timestamp, and metadata — enabling instant offline verification from any device.</p>
+        <div class="feat-algo">SPEC: QR ISO/IEC 18004:2015</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how-section">
+    <div class="section-tag">Process</div>
+    <h2 class="section-title">How It Works</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-title">Upload Document</div>
+        <p class="step-desc">Drag and drop any PDF. Our system immediately begins cryptographic processing.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-title">Hash Generation</div>
+        <p class="step-desc">SHA-256 generates an immutable fingerprint of the exact document contents.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-title">Sign & Encrypt</div>
+        <p class="step-desc">RSA private key signs the hash. AES-256 encrypts the verification payload.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <div class="step-title">QR Seal</div>
+        <p class="step-desc">A tamper-proof QR code is generated, embedding the complete cryptographic proof.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">05</div>
+        <div class="step-title">Instant Verify</div>
+        <p class="step-desc">Anyone can scan the QR or re-upload the document to verify authenticity in seconds.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="cta-box">
+      <h2 class="cta-title">Ready to Secure Your Documents?</h2>
+      <p class="cta-sub">Join thousands of organizations that trust SecureShield to protect their most critical documents. Enterprise-grade security, instant deployment.</p>
+      <div style="display:flex;gap:16px;justify-content:center;">
+        <button class="btn-primary" onclick="showPage('upload')">Start Free Trial</button>
+        <button class="btn-secondary" onclick="showPage('verify')">Verify a Document</button>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-logo">SECURESHIELD</div>
+    <div class="footer-copy">© 2025 SECURESHIELD INC. · ENCRYPTED · AUTHENTICATED · TRUSTED</div>
+  </footer>
+</div>
+
+<!-- ===== UPLOAD DASHBOARD ===== -->
+<div id="page-upload" class="page">
+  <div class="dashboard">
+    <div class="dash-main">
+      <div class="dash-header">
+        <div>
+          <div class="dash-title">UPLOAD PORTAL</div>
+          <div class="dash-subtitle">TERMINAL:/secure/document/seal</div>
+        </div>
+        <div class="status-badge">
+          <div class="status-dot"></div>
+          SYSTEM ONLINE
+        </div>
+      </div>
+
+      <!-- DROP ZONE -->
+      <div class="drop-zone" id="dropZone" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" onclick="document.getElementById('fileInput').click()">
+        <div class="drop-icon">📄</div>
+        <div class="drop-title">Drop your document here</div>
+        <div class="drop-sub">PDF, DOCX, or any document format · Max 100MB</div>
+        <div class="drop-btn">Browse Files</div>
+        <input type="file" id="fileInput" accept=".pdf,.doc,.docx" onchange="handleFileSelect(event)"/>
+      </div>
+
+      <!-- PROGRESS -->
+      <div class="progress-area" id="progressArea">
+        <div class="progress-file" id="progressFile">
+          <div class="pf-icon">📄</div>
+          <div class="pf-info">
+            <div class="pf-name" id="pf-name">document.pdf</div>
+            <div class="pf-size" id="pf-size">2.4 MB</div>
+            <div class="pf-bar"><div class="pf-bar-fill" id="pf-fill"></div></div>
+          </div>
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--cyan)" id="pf-pct">0%</div>
+        </div>
+
+        <div class="hash-vis" id="hashVis">
+          <div class="hv-label">SHA-256 Computing...</div>
+          <div class="hv-hash" id="hashOutput"></div>
+        </div>
+        <div class="verify-id-box">
+          <div class="label">
+            VERIFICATION ID
+          </div>
+          <div id="verifyIdOutput">
+            --
+          </div>
+        </div>
+
+        <div class="qr-area" id="qrArea">
+          <div class="qr-label">QR Verification Code Generated</div>
+          <div id="qr-canvas">
+            <div class="qr-canvas-inner" id="qrGrid"></div>
+            <div class="qr-reveal-overlay" id="qrReveal"></div>
+          </div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:rgba(0,229,255,0.4);margin-top:12px;letter-spacing:1px;">SCAN TO VERIFY AUTHENTICITY</div>
+        </div>
+
+        <div class="success-state" id="successState">
+          <div class="success-icon">✅</div>
+          <div class="success-title">DOCUMENT SEALED</div>
+          <div class="success-sub">Cryptographic proof generated · QR code embedded · Ready for distribution</div>
+          <div style="margin-top:24px;display:flex;gap:12px;justify-content:center;">
+            <button class="btn-primary" onclick="showPage('verify')">Verify This Document</button>
+            <button class="btn-secondary" onclick="resetUpload()">Seal Another</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="dash-sidebar">
+      <div class="sb-section">
+        <div class="sb-title">Encryption Status</div>
+        <div class="encrypt-ring">
+          <svg class="er-svg" width="120" height="120" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(0,229,255,0.1)" stroke-width="1"/>
+            <circle cx="60" cy="60" r="54" fill="none" stroke="url(#cyanGrad)" stroke-width="1.5"
+              stroke-dasharray="80 260" stroke-linecap="round"/>
+            <circle cx="60" cy="60" r="44" fill="none" stroke="rgba(0,255,136,0.08)" stroke-width="1"/>
+            <circle cx="60" cy="60" r="44" fill="none" stroke="rgba(0,255,136,0.4)" stroke-width="1"
+              stroke-dasharray="40 236" stroke-linecap="round"/>
+            <defs>
+              <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="var(--cyan)"/>
+                <stop offset="100%" stop-color="var(--emerald)"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <svg class="er-svg2" width="60" height="60" viewBox="0 0 60 60">
+            <circle cx="30" cy="30" r="26" fill="none" stroke="rgba(0,229,255,0.15)" stroke-width="1"/>
+            <circle cx="30" cy="30" r="26" fill="none" stroke="rgba(0,229,255,0.5)" stroke-width="1"
+              stroke-dasharray="20 143" stroke-linecap="round"/>
+          </svg>
+          <div class="er-center">AES<br/>256</div>
+        </div>
+
+        <div class="sb-row">
+          <span class="sb-key">ALGORITHM</span>
+          <span class="sb-val">AES-256-GCM</span>
+        </div>
+        <div class="sb-row">
+          <span class="sb-key">KEY SIZE</span>
+          <span class="sb-val">256 bits</span>
+        </div>
+        <div class="sb-row">
+          <span class="sb-key">MODE</span>
+          <span class="sb-val">Galois/Counter</span>
+        </div>
+        <div class="sb-row">
+          <span class="sb-key">STATUS</span>
+          <span class="sb-val green active" id="encryptStatus">IDLE</span>
+        </div>
+      </div>
+
+      <div class="sb-section">
+        <div class="sb-title">Signature Chain</div>
+        <div class="sb-row">
+          <span class="sb-key">ALGORITHM</span>
+          <span class="sb-val">RSA-4096</span>
+        </div>
+        <div class="sb-row">
+          <span class="sb-key">PADDING</span>
+          <span class="sb-val">PSS-SHA512</span>
+        </div>
+        <div class="sb-row">
+          <span class="sb-key">ISSUER</span>
+          <span class="sb-val">SS-ROOT-CA-01</span>
+        </div>
+        <div class="sb-row">
+          <span class="sb-key">EXPIRES</span>
+          <span class="sb-val">2027-01-01</span>
+        </div>
+      </div>
+
+      <div class="sb-section">
+        <div class="sb-title">System Integrity</div>
+        <div class="sb-row">
+          <span class="sb-key">HSM</span>
+          <span class="sb-val green">ONLINE</span>
+        </div>
+        <div class="sb-row">
+          <span class="sb-key">ENTROPY</span>
+          <span class="sb-val green">SUFFICIENT</span>
+        </div>
+        <div class="sb-row">
+          <span class="sb-key">TIMESTAMP</span>
+          <span class="sb-val" id="liveTime">--:--:--</span>
+        </div>
+        <div class="sb-row">
+          <span class="sb-key">CERT STATUS</span>
+          <span class="sb-val green">VALID</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== VERIFICATION PAGE ===== -->
+<div id="page-verify" class="page">
+  <div class="verify-layout">
+    <!-- LEFT: Upload -->
+    <div class="verify-upload">
+      <div class="verify-title">Upload Document to Verify</div>
+      <input
+      type="text"
+      id="verifyIdInput"
+      placeholder="ENTER VERIFICATION ID"
+      />
+      <div class="scan-target" id="scanTarget">
+        <div class="scan-corner sc-tl"></div>
+        <div class="scan-corner sc-tr"></div>
+        <div class="scan-corner sc-bl"></div>
+        <div class="scan-corner sc-br"></div>
+        <div class="scan-beam" id="scanBeam"></div>
+        <div class="scan-doc-vis" id="scanDocVis">
+          <div class="sv-line"></div>
+          <div class="sv-line"></div>
+          <div class="sv-line"></div>
+          <div class="sv-line"></div>
+          <div class="sv-line"></div>
+          <div class="sv-line"></div>
+          <div class="sv-line"></div>
+          <div class="sv-line"></div>
+        </div>
+        <div style="position:absolute;bottom:12px;left:0;right:0;text-align:center;font-family:var(--font-mono);font-size:9px;color:rgba(0,229,255,0.3);letter-spacing:2px;" id="scanStatus">AWAITING DOCUMENT</div>
+      </div>
+
+      <div class="verify-cta-row">
+        <button class="btn-primary" onclick="document.getElementById('verifyInput').click()">Upload Document</button>
+        <button class="btn-secondary" onclick="simulateTampered()">Demo: Tampered</button>
+        <button class="btn-secondary" onclick="simulateValid()">Demo: Valid</button>
+      </div>
+      <input type="file" id="verifyInput" accept=".pdf,.doc,.docx" onchange="handleVerify(event)"/>
+
+      <div style="margin-top:32px;font-family:var(--font-mono);font-size:10px;color:rgba(200,232,240,0.3);text-align:center;line-height:1.8;max-width:280px;">
+        Supports PDF, DOCX, and any SecureShield-sealed document.<br/>
+        <span style="color:rgba(0,229,255,0.3)">Verification is instant and cryptographically proven.</span>
+      </div>
+    </div>
+
+    <!-- RIGHT: Result -->
+    <div class="verify-result">
+      <!-- Idle -->
+      <div class="result-idle" id="resultIdle">
+        <div class="ri-icon">🛡️</div>
+        <p>AWAITING DOCUMENT</p>
+        <p style="margin-top:8px;font-size:9px;">Upload a document to begin verification</p>
+      </div>
+
+      <!-- Checking -->
+      <div class="result-checking" id="resultChecking">
+        <div class="check-ring">
+          <svg class="check-ring-svg" width="120" height="120" viewBox="0 0 120 120">
+            <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(0,229,255,0.1)" stroke-width="2"/>
+            <circle cx="60" cy="60" r="54" fill="none" stroke="var(--cyan)" stroke-width="2"
+              stroke-dasharray="60 280" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div style="font-family:var(--font-display);font-size:14px;color:var(--cyan);letter-spacing:3px;margin-bottom:8px;">ANALYZING</div>
+        <div style="font-family:var(--font-mono);font-size:10px;color:rgba(0,229,255,0.4);letter-spacing:2px;" id="checkingStatus">Computing SHA-256...</div>
+      </div>
+
+      <!-- Valid -->
+      <div class="result-valid" id="resultValid">
+        <div class="valid-container">
+          <div class="valid-hex">✓</div>
+          <div class="valid-title">AUTHENTIC</div>
+          <div class="valid-sub">Document integrity verified · No tampering detected</div>
+          <div class="valid-details">
+            <div class="vd-row"><span class="vd-key">SHA-256 MATCH</span><span class="vd-val">✓ VERIFIED</span></div>
+            <div class="vd-row"><span class="vd-key">RSA SIGNATURE</span><span class="vd-val">✓ VALID</span></div>
+            <div class="vd-row"><span class="vd-key">TIMESTAMP</span><span class="vd-val" id="vd-time">2025-01-01</span></div>
+            <div class="vd-row"><span class="vd-key">ISSUER</span><span class="vd-val">SS-ROOT-CA-01</span></div>
+            <div class="vd-row"><span class="vd-key">INTEGRITY</span><span class="vd-val">100%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tampered -->
+      <div class="result-tampered" id="resultTampered">
+        <div class="tampered-container">
+          <div class="tampered-hex">⚠</div>
+          <div class="tampered-title">TAMPERED</div>
+          <div class="tampered-sub">Hash mismatch detected · Document integrity compromised</div>
+          <div class="tampered-warning">
+            WARNING: The document hash does not match the original sealed hash. This document has been modified after signing. Hash delta detected in bytes 0x2A4F – 0x2B12. Do not trust this document.
+          </div>
+          <div style="margin-top:20px;">
+            <button class="btn-secondary" onclick="resetVerify()">Verify Another</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// =====================================================
+// CURSOR
+// =====================================================
+const API_URL =
+  'http://localhost:5000/api';
+
+const cursor = document.getElementById('cursor');
+const cursorRing = document.getElementById('cursor-ring');
+const mouseLight = document.getElementById('mouse-light');
+let mx=window.innerWidth/2,my=window.innerHeight/2;
+document.addEventListener('mousemove',e=>{
+  mx=e.clientX;my=e.clientY;
+  cursor.style.left=mx+'px';cursor.style.top=my+'px';
+  cursorRing.style.left=mx+'px';cursorRing.style.top=my+'px';
+  mouseLight.style.left=mx+'px';mouseLight.style.top=my+'px';
+});
+document.addEventListener('mousedown',()=>{
+  cursor.style.width='8px';cursor.style.height='8px';
+  cursorRing.style.width='48px';cursorRing.style.height='48px';
+});
+document.addEventListener('mouseup',()=>{
+  cursor.style.width='12px';cursor.style.height='12px';
+  cursorRing.style.width='36px';cursorRing.style.height='36px';
+});
+
+// =====================================================
+// PARTICLE FIELD
+// =====================================================
+const canvas=document.getElementById('bg-canvas');
+const ctx=canvas.getContext('2d');
+let W,H,particles=[];
+function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;}
+resize();window.addEventListener('resize',resize);
+
+function Particle(){
+  this.x=Math.random()*W;
+  this.y=Math.random()*H;
+  this.vx=(Math.random()-0.5)*0.3;
+  this.vy=(Math.random()-0.5)*0.3;
+  this.r=Math.random()*1.5+0.3;
+  this.alpha=Math.random()*0.5+0.1;
+  this.color=Math.random()>0.7?'0,255,136':'0,229,255';
+}
+Particle.prototype.update=function(){
+  this.x+=this.vx;this.y+=this.vy;
+  if(this.x<0)this.x=W;if(this.x>W)this.x=0;
+  if(this.y<0)this.y=H;if(this.y>H)this.y=0;
+  // mouse attraction
+  const dx=mx-this.x,dy=my-this.y;
+  const dist=Math.sqrt(dx*dx+dy*dy);
+  if(dist<150){this.x+=dx*0.002;this.y+=dy*0.002;}
+};
+Particle.prototype.draw=function(){
+  ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+  ctx.fillStyle=`rgba(${this.color},${this.alpha})`;ctx.fill();
+};
+for(let i=0;i<120;i++)particles.push(new Particle());
+
+function drawConnections(){
+  for(let i=0;i<particles.length;i++){
+    for(let j=i+1;j<particles.length;j++){
+      const dx=particles[i].x-particles[j].x;
+      const dy=particles[i].y-particles[j].y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<100){
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x,particles[i].y);
+        ctx.lineTo(particles[j].x,particles[j].y);
+        ctx.strokeStyle=`rgba(0,229,255,${0.06*(1-dist/100)})`;
+        ctx.lineWidth=0.5;ctx.stroke();
+      }
+    }
+  }
+}
+function animate(){
+  ctx.clearRect(0,0,W,H);
+  particles.forEach(p=>{p.update();p.draw();});
+  drawConnections();
+  requestAnimationFrame(animate);
+}
+animate();
+
+// =====================================================
+// 3D DOC CARD
+// =====================================================
+const docCard=document.getElementById('docCard3D');
+if(docCard){
+  document.addEventListener('mousemove',e=>{
+    const rect=docCard.getBoundingClientRect();
+    const cx=rect.left+rect.width/2;
+    const cy=rect.top+rect.height/2;
+    const rx=(e.clientY-cy)/20;
+    const ry=-(e.clientX-cx)/20;
+    docCard.style.transform=`rotateX(${rx}deg) rotateY(${ry}deg)`;
+  });
+}
+
+// HERO HASH ANIMATION
+const heroHashEl=document.getElementById('heroHash');
+const chars='0123456789abcdef';
+function scrambleHash(){
+  if(!heroHashEl)return;
+  let str='';
+  for(let i=0;i<64;i++)str+=chars[Math.floor(Math.random()*16)];
+  heroHashEl.textContent=str;
+}
+setInterval(scrambleHash,2000);
+
+// COUNTER ANIMATION
+function animCounter(el,target,suffix=''){
+  let start=0;
+  const step=Math.ceil(target/60);
+  const timer=setInterval(()=>{
+    start=Math.min(start+step,target);
+    el.textContent=start.toLocaleString()+suffix;
+    if(start>=target)clearInterval(timer);
+  },30);
+}
+setTimeout(()=>{
+  const c1=document.getElementById('cnt1');
+  const c2=document.getElementById('cnt2');
+  if(c1)animCounter(c1,847291,'');
+  if(c2)animCounter(c2,12847,'');
+},500);
+
+// =====================================================
+// PAGE SWITCHING
+// =====================================================
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// =====================================================
+// LIVE CLOCK
+// =====================================================
+function updateClock(){
+  const el=document.getElementById('liveTime');
+  if(el){
+    const now=new Date();
+    el.textContent=now.toTimeString().slice(0,8);
+  }
+}
+setInterval(updateClock,1000);updateClock();
+
+// =====================================================
+// UPLOAD DASHBOARD
+// =====================================================
+let uploadInProgress=false;
+
+function handleDragOver(e){
+  e.preventDefault();
+  document.getElementById('dropZone').classList.add('drag-over');
+}
+function handleDragLeave(e){
+  document.getElementById('dropZone').classList.remove('drag-over');
+}
+function handleDrop(e){
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('drag-over');
+  const file=e.dataTransfer.files[0];
+  if(file)processFile(file);
+}
+function handleFileSelect(e){
+  const file=e.target.files[0];
+  if(file)processFile(file);
+}
+
+async function verifyDocument(
+  file,
+  verificationId
+){
+
+  const formData =
+    new FormData();
+
+  formData.append(
+    'document',
+    file
+  );
+
+  formData.append(
+    'verificationId',
+    verificationId
+  );
+
+  try {
+
+    const response =
+      await fetch(
+        `${API_URL}/verify`,
+        {
+          method:'POST',
+          body:formData
+        }
+      );
+
+    const data =
+      await response.json();
+
+    console.log(data);
+
+    showVerificationResult(
+      data.integrity
+    );
+
+  } catch(err){
+
+    console.error(err);
+
+  }
+
+}
+
+
+
+async function uploadToBackend(file) {
+
+  const formData =
+    new FormData();
+
+  formData.append(
+    'document',
+    file
+  );
+
+  try {
+
+    const response =
+      await fetch(
+        `${API_URL}/upload`,
+        {
+          method: 'POST',
+          body: formData
+        }
+      );
+
+    const data =
+      await response.json();
+
+    console.log(data);
+    document.getElementById(
+      'verifyIdOutput'
+    ).textContent =
+      data.verificationId;
+    // REAL HASH
+    document.getElementById(
+      'hashOutput'
+    ).textContent =
+      data.hash;
+
+    // SHOW HASH SECTION
+    document
+      .getElementById(
+        'hashVis'
+      )
+      .classList.add(
+        'active'
+      );
+
+    // SHOW QR SECTION
+    document
+      .getElementById(
+        'qrArea'
+      )
+      .classList.add(
+        'active'
+      );
+
+    // REAL QR CODE
+    const qrGrid =
+      document.getElementById(
+        'qrGrid'
+      );
+
+    qrGrid.innerHTML = `
+      <img
+        src="${data.qrCode}"
+        style="
+          width:220px;
+          height:220px;
+          object-fit:contain;
+          image-rendering:pixelated;
+        "
+      />
+    `;
+
+    // SUCCESS
+    document
+      .getElementById(
+        'successState'
+      )
+      .classList.add(
+        'active'
+      );
+
+    document
+      .getElementById(
+        'encryptStatus'
+      )
+      .textContent =
+      'COMPLETE';
+
+  } catch (err) {
+
+    console.error(err);
+
+  }
+
+}
+function processFile(file){
+  if(uploadInProgress)return;
+  uploadInProgress=true;
+  // Show progress
+  const progressArea=document.getElementById('progressArea');
+  progressArea.classList.add('active');
+  document.getElementById('pf-name').textContent=file.name;
+  document.getElementById('pf-size').textContent=(file.size/1024/1024).toFixed(2)+' MB';
+  document.getElementById('encryptStatus').textContent='PROCESSING';
+  // Progress bar
+  const fill=document.getElementById('pf-fill');
+  const pct=document.getElementById('pf-pct');
+  let progress=0;
+  const progressInterval=setInterval(()=>{
+    progress=Math.min(progress+Math.random()*3+1,100);
+    fill.style.width=progress+'%';
+    pct.textContent=Math.floor(progress)+'%';
+    if(progress>=100){
+      clearInterval(progressInterval);
+      uploadToBackend(file);
+    }
+  },50);
+}
+
+function startHashAnimation(){
+  const hashVis=document.getElementById('hashVis');
+  hashVis.classList.add('active');
+  const output=document.getElementById('hashOutput');
+  const fullHash='a3f8d2e1b9c4f7a0e5d8c3b2a1f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2';
+  output.textContent='';
+  let i=0;
+  const hashInterval=setInterval(()=>{
+    if(i<fullHash.length){
+      const span=document.createElement('span');
+      span.className='new-char';
+      span.textContent=fullHash[i];
+      output.appendChild(span);
+      i++;
+    } else {
+      clearInterval(hashInterval);
+      setTimeout(generateQR,500);
+    }
+  },40);
+  document.getElementById('encryptStatus').textContent='ENCRYPTING';
+}
+
+function generateQR(){
+  const qrArea=document.getElementById('qrArea');
+  qrArea.classList.add('active');
+  const grid=document.getElementById('qrGrid');
+  grid.innerHTML='';
+  // Generate 144 cells (12x12)
+  const pattern=[];
+  for(let i=0;i<144;i++){
+    const cell=document.createElement('div');
+    cell.className='qr-cell';
+    const filled=Math.random()>0.5;
+    // Force corners
+    const row=Math.floor(i/12),col=i%12;
+    const inCorner=(row<3&&col<3)||(row<3&&col>8)||(row>8&&col<3);
+    if(inCorner||(row===3&&(col<3||col>8))||(col===3&&(row<3||row>8))){
+      cell.classList.add('filled');
+    } else if(filled){
+      cell.classList.add('filled');
+    }
+    grid.appendChild(cell);
+  }
+  // Animate cells in
+  const cells=grid.querySelectorAll('.qr-cell');
+  cells.forEach((cell,i)=>{
+    setTimeout(()=>{
+      if(cell.classList.contains('filled')){
+        cell.style.background='#fff';
+      } else {
+        cell.style.background='rgba(200,232,240,0.03)';
+      }
+    },i*6);
+  });
+  setTimeout(showSuccess,1500);
+}
+
+function showSuccess(){
+  document.getElementById('successState').classList.add('active');
+  document.getElementById('encryptStatus').textContent='COMPLETE';
+}
+
+function resetUpload(){
+  uploadInProgress=false;
+  document.getElementById('progressArea').classList.remove('active');
+  document.getElementById('hashVis').classList.remove('active');
+  document.getElementById('qrArea').classList.remove('active');
+  document.getElementById('successState').classList.remove('active');
+  document.getElementById('hashOutput').textContent='';
+  document.getElementById('pf-fill').style.width='0%';
+  document.getElementById('encryptStatus').textContent='IDLE';
+  document.getElementById('fileInput').value='';
+}
+
+// =====================================================
+// VERIFICATION PAGE
+// =====================================================
+
+function handleVerify(e){
+
+  const file =
+    e.target.files[0];
+
+  if(file){
+
+    const verificationId =
+      document.getElementById(
+        'verifyIdInput'
+      ).value;
+
+    if(!verificationId){
+
+      alert(
+        'Please enter Verification ID'
+      );
+
+      return;
+
+    }
+
+    startVerification();
+
+    verifyDocument(
+      file,
+      verificationId
+    );
+
+  }
+
+}
+
+// DEMO BUTTONS
+function simulateValid(){
+
+  showVerificationResult(true);
+
+}
+
+function simulateTampered(){
+
+  showVerificationResult(false);
+
+}
+
+// REAL BACKEND VERIFY
+async function verifyDocument(
+  file,
+  verificationId
+){
+
+  const formData =
+    new FormData();
+
+  formData.append(
+    'document',
+    file
+  );
+
+  formData.append(
+    'verificationId',
+    verificationId
+  );
+
+  try {
+
+    const response =
+      await fetch(
+        `${API_URL}/verify`,
+        {
+          method:'POST',
+          body:formData
+        }
+      );
+
+    const data =
+      await response.json();
+
+    console.log(data);
+
+    showVerificationResult(
+      data.integrity
+    );
+
+  } catch(err){
+
+    console.error(err);
+
+    showVerificationResult(
+      false
+    );
+
+  }
+
+}
+
+// SCAN ANIMATION
+function startVerification(){
+
+  // Hide idle
+  document
+    .getElementById(
+      'resultIdle'
+    )
+    .classList.add(
+      'hide'
+    );
+
+  document
+    .getElementById(
+      'resultValid'
+    )
+    .classList.remove(
+      'show'
+    );
+
+  document
+    .getElementById(
+      'resultTampered'
+    )
+    .classList.remove(
+      'show'
+    );
+
+  // Show checking
+  document
+    .getElementById(
+      'resultChecking'
+    )
+    .classList.add(
+      'show'
+    );
+
+  // Activate scan beam
+  document
+    .getElementById(
+      'scanBeam'
+    )
+    .classList.add(
+      'active'
+    );
+
+  document
+    .getElementById(
+      'scanStatus'
+    )
+    .textContent =
+    'SCANNING...';
+
+  const statuses = [
+
+    'Computing SHA-256...',
+    'Verifying RSA Signature...',
+    'Checking AES Integrity...',
+    'Comparing Hash Digest...',
+    'Validating Timestamp...'
+
+  ];
+
+  let si = 0;
+
+  const statusInterval =
+    setInterval(()=>{
+
+      if(si < statuses.length){
+
+        document
+          .getElementById(
+            'checkingStatus'
+          )
+          .textContent =
+          statuses[si];
+
+        si++;
+
+      } else {
+
+        clearInterval(
+          statusInterval
+        );
+
+      }
+
+    },600);
+
+}
+
+// FINAL RESULT UI
+function showVerificationResult(
+  isValid
+){
+
+  document
+    .getElementById(
+      'resultChecking'
+    )
+    .classList.remove(
+      'show'
+    );
+
+  document
+    .getElementById(
+      'scanBeam'
+    )
+    .classList.remove(
+      'active'
+    );
+
+  document
+    .getElementById(
+      'scanStatus'
+    )
+    .textContent =
+    isValid
+      ? 'VERIFIED'
+      : 'TAMPERED';
+
+  if(isValid){
+
+    document
+      .getElementById(
+        'vd-time'
+      )
+      .textContent =
+      new Date()
+      .toISOString()
+      .slice(0,10);
+
+    document
+      .getElementById(
+        'resultValid'
+      )
+      .classList.add(
+        'show'
+      );
+
+    // GREEN STATE
+    document
+      .getElementById(
+        'scanTarget'
+      )
+      .style.borderColor =
+      'rgba(0,255,136,0.5)';
+
+    document
+      .getElementById(
+        'scanTarget'
+      )
+      .style.boxShadow =
+      '0 0 30px rgba(0,255,136,0.1)';
+
+    document
+      .getElementById(
+        'scanStatus'
+      )
+      .style.color =
+      'var(--emerald)';
+
+  } else {
+
+    document
+      .getElementById(
+        'resultTampered'
+      )
+      .classList.add(
+        'show'
+      );
+
+    // RED STATE
+    document
+      .getElementById(
+        'scanTarget'
+      )
+      .style.borderColor =
+      'rgba(255,51,102,0.5)';
+
+    document
+      .getElementById(
+        'scanTarget'
+      )
+      .style.boxShadow =
+      '0 0 30px rgba(255,51,102,0.1)';
+
+    document
+      .getElementById(
+        'scanStatus'
+      )
+      .style.color =
+      'var(--red)';
+
+    // GLITCH
+    document
+      .getElementById(
+        'scanTarget'
+      )
+      .style.animation =
+      'glitchTarget 0.5s';
+
+  }
+
+}
+
+// RESET PAGE
+function resetVerify(){
+
+  document
+    .getElementById(
+      'resultIdle'
+    )
+    .classList.remove(
+      'hide'
+    );
+
+  document
+    .getElementById(
+      'resultValid'
+    )
+    .classList.remove(
+      'show'
+    );
+
+  document
+    .getElementById(
+      'resultTampered'
+    )
+    .classList.remove(
+      'show'
+    );
+
+  document
+    .getElementById(
+      'resultChecking'
+    )
+    .classList.remove(
+      'show'
+    );
+
+  document
+    .getElementById(
+      'scanBeam'
+    )
+    .classList.remove(
+      'active'
+    );
+
+  document
+    .getElementById(
+      'scanTarget'
+    )
+    .style.borderColor =
+    '';
+
+  document
+    .getElementById(
+      'scanTarget'
+    )
+    .style.boxShadow =
+    '';
+
+  document
+    .getElementById(
+      'scanStatus'
+    )
+    .style.color =
+    '';
+
+  document
+    .getElementById(
+      'scanStatus'
+    )
+    .textContent =
+    'AWAITING DOCUMENT';
+
+  document
+    .getElementById(
+      'verifyInput'
+    )
+    .value = '';
+
+}
+</script>
+</body>
+</html>
