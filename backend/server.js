@@ -20,7 +20,25 @@ app.use(express.json());
 
 mongoose.connect(process.env.MONGO_URI)
 .then(() => {
+
     console.log('MongoDB Connected');
+
+    app.listen(PORT, () => {
+
+        console.log(
+            `Server running on port ${PORT}`
+        );
+
+    });
+
+})
+.catch((err) => {
+
+    console.log(
+        'Mongo Error:',
+        err
+    );
+
 });
 
 app.use('/api/upload', uploadRoutes);
@@ -29,8 +47,3 @@ app.use('/api/verify', verifyRoutes);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-    console.log(
-        `Server running on port ${PORT}`
-    );
-});
