@@ -29,7 +29,7 @@ const uploadDocument = async (req, res) => {
 
         
 
-        const qrData = `http://localhost:3000/verify/${verificationId}`;
+        const qrData = `https://sofia-api-jtlb.onrender.com/verify/${verificationId}`;
 
         const qrCode = await QRCode.toDataURL(qrData);
 
@@ -43,7 +43,7 @@ const uploadDocument = async (req, res) => {
 
             verificationId,
 
-            encryptedPath
+            
 
         });
 
