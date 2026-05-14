@@ -9,7 +9,7 @@ const {
 const router = express.Router();
 
 const upload = multer({
-    dest: 'uploads/'
+    storage: multer.memoryStorage()
 });
 
 router.post(

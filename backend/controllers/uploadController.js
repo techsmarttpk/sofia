@@ -21,7 +21,7 @@ const uploadDocument = async (req, res) => {
             });
         }
 
-        const filePath = req.file.path;
+        const filePath = req.file.buffer;
 
         const fileBuffer = fs.readFileSync(filePath);
 
