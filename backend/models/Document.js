@@ -22,10 +22,10 @@ const documentSchema = new mongoose.Schema({
         required: true
     },
 
-    encryptedPath: {
-        type: String,
-        required: true
-    },
+    //encryptedPath: {
+        //type: String,
+        //required: true
+    //},
 
     uploadedAt: {
         type: Date,
