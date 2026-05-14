@@ -1,9 +1,7 @@
 require('dotenv').config();
 
 const express = require('express');
-
 const mongoose = require('mongoose');
-
 const cors = require('cors');
 
 const uploadRoutes =
@@ -15,12 +13,18 @@ const verifyRoutes =
 const app = express();
 
 app.use(cors());
-
 app.use(express.json());
+
+const PORT = process.env.PORT || 5000;
+
+app.use('/api/upload', uploadRoutes);
+app.use('/api/verify', verifyRoutes);
+
+console.log("MONGO URI:", process.env.MONGO_URI);
 
 mongoose.connect(process.env.MONGO_URI, {
 
-    serverSelectionTimeoutMS: 10000
+    serverSelectionTimeoutMS: 5000
 
 })
 .then(() => {
@@ -38,13 +42,7 @@ mongoose.connect(process.env.MONGO_URI, {
 })
 .catch((err) => {
 
+    console.log("MONGO ERROR:");
     console.log(err);
 
 });
-
-app.use('/api/upload', uploadRoutes);
-
-app.use('/api/verify', verifyRoutes);
-
-const PORT = process.env.PORT || 5000;
-
