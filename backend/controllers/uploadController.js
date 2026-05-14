@@ -1,9 +1,7 @@
-const path = require('path');
-const fs = require('fs');
 
 const generateHash = require('../crypto/hash');
 const { signHash } = require('../crypto/rsa');
-const encryptFile = require('../crypto/aes');
+
 
 const Document = require('../models/Document');
 
@@ -68,10 +66,11 @@ const uploadDocument = async (req, res) => {
         console.log(error);
 
         res.status(500).json({
-            message: 'Upload failed'
-        });
+            message: error.message,
+            error
+    });
 
-    }
+}
 
 };
 
