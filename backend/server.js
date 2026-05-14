@@ -18,7 +18,11 @@ app.use(cors());
 
 app.use(express.json());
 
-mongoose.connect(process.env.MONGO_URI)
+mongoose.connect(process.env.MONGO_URI, {
+
+    serverSelectionTimeoutMS: 10000
+
+})
 .then(() => {
 
     console.log('MongoDB Connected');
@@ -34,10 +38,7 @@ mongoose.connect(process.env.MONGO_URI)
 })
 .catch((err) => {
 
-    console.log(
-        'Mongo Error:',
-        err
-    );
+    console.log(err);
 
 });
 
