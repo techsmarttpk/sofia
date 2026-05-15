@@ -46,3 +46,23 @@ mongoose.connect(process.env.MONGO_URI, {
     console.log(err);
 
 });
+
+app.get('/verify/:id', async (req, res) => {
+
+    const verificationId = req.params.id;
+
+    const document = await Document.findOne({
+        verificationId
+    });
+
+    if (!document) {
+        return res.send("Document not found");
+    }
+
+    res.send(`
+        <h1>GhostSign Verification</h1>
+        <p>Status: VALID</p>
+        <p>Verification ID: ${verificationId}</p>
+    `);
+
+});
