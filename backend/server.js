@@ -1,4 +1,5 @@
 require('dotenv').config();
+const Document = require('./models/Document');
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -60,7 +61,7 @@ app.get('/verify/:id', async (req, res) => {
     }
 
     res.send(`
-        <h1>GhostSign Verification</h1>
+        <h1>Sofia Signature Verification</h1>
         <p>Status: VALID</p>
         <p>Verification ID: ${verificationId}</p>
     `);
